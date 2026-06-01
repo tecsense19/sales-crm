@@ -5,7 +5,7 @@
         <x-common.page-breadcrumb pageTitle="Edit Invoice" />
     </div>
 
-    <form action="{{ route('billing.update', $billing) }}" method="POST" class="max-w-5xl mx-auto space-y-6">
+    <form action="{{ route('billing.update', $billing) }}" method="POST" class="mx-auto space-y-6">
         @csrf
         @method('PUT')
         <input type="hidden" name="invoice_number" value="{{ $billing->invoice_number }}">

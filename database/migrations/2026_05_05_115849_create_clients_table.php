@@ -24,6 +24,8 @@ return new class extends Migration
             $table->string('facebook')->nullable();
             $table->string('instagram')->nullable();
             $table->string('youtube')->nullable();
+            $table->string('x')->nullable();
+            $table->longText('source_url')->nullable();
             $table->string('telegram')->nullable();
             $table->string('whatsapp')->nullable();
             $table->string('teams')->nullable();
@@ -31,6 +33,7 @@ return new class extends Migration
             $table->string('status')->default('New');
             $table->date('last_contacted_date')->nullable();
             $table->integer('follow_up_days')->default(7);
+            $table->date('next_followup_date')->nullable();
             $table->foreignId('assigned_to')->nullable()->constrained('users')->onDelete('set null');
             $table->text('notes')->nullable();
             $table->timestamps();

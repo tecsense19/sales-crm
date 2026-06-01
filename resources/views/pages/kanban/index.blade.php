@@ -23,8 +23,8 @@
         box-shadow: 0 1px 3px rgba(0,0,0,.06);
         display: flex;
         flex-direction: column;
-        height: 600px;
-        max-height: 600px;
+        height: 725px;
+        max-height: 725px;
         overflow: hidden;
         flex-shrink: 0;
     }
@@ -342,7 +342,7 @@
         flex-direction: column;
         gap: 10px;
         position: relative;
-        overflow: hidden;
+        overflow: visible;
     }
     .kb-filter-bar::before {
         content: '';
@@ -390,7 +390,7 @@
         border-radius: 9px;
         transition: border-color .15s, box-shadow .15s;
         height: 36px;
-        overflow: hidden;
+        overflow: visible;
     }
     .kb-filter-field:focus-within {
         border-color: #0079bf;
@@ -810,47 +810,117 @@
     .flatpickr-calendar {
         z-index: 999999 !important;
     }
+    
+    /* ── Filter Drawer Slide-over ── */
+    .kb-drawer-overlay {
+        position: fixed;
+        top: 0; right: 0; bottom: 0; left: 0;
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(4px);
+        z-index: 99999;
+        display: flex;
+        justify-content: flex-end;
+    }
+    .kb-drawer-panel {
+        width: 100%;
+        max-width: 400px;
+        height: 100%;
+        background: #ffffff;
+        box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+    }
+    .dark .kb-drawer-panel {
+        background: #1e2433;
+        box-shadow: -4px 0 24px rgba(0,0,0,0.4);
+        border-left: 1px solid #2d3548;
+    }
+    .kb-drawer-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e4e6ea;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .dark .kb-drawer-header { border-color: #2d3548; }
+    .kb-drawer-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #172b4d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .dark .kb-drawer-title { color: #f1f5f9; }
+    .kb-drawer-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #6b778c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: background 0.12s;
+    }
+    .kb-drawer-close:hover { background: #f4f5f7; color: #172b4d; }
+    .dark .kb-drawer-close:hover { background: #2d3548; color: #f1f5f9; }
+    .kb-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .kb-drawer-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .kb-drawer-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #5e6c84;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .dark .kb-drawer-label { color: #94a3b8; }
+
     [x-cloak] { display: none !important; }
 </style>
 
 <div x-data="{
-    clients: {{ $clients->map(function($c) {
-        return [
-            'id'                  => $c->id,
-            'name'                => $c->name,
-            'email'               => $c->email ?? '',
-            'mobile_no'           => $c->mobile_no ?? '',
-            'website'             => $c->website ?? '',
-            'linkedin'            => $c->linkedin ?? '',
-            'facebook'            => $c->facebook ?? '',
-            'instagram'           => $c->instagram ?? '',
-            'youtube'             => $c->youtube ?? '',
-            'x'                   => $c->x ?? '',
-            'telegram'            => $c->telegram ?? '',
-            'whatsapp'            => $c->whatsapp ?? '',
-            'teams'               => $c->teams ?? '',
-            'source_url'          => $c->source_url ?? '',
-            'project_link'        => $c->project_link ?? '',
-            'technology'          => $c->technology ?? '',
-            'location'            => $c->location ?? '',
-            'status'              => $c->status,
-            'is_overdue'          => $c->isFollowUpOverdue(),
-            'last_contacted'      => $c->last_contacted_date ? $c->last_contacted_date->format('d M Y') : '',
-            'last_contacted_raw'  => $c->last_contacted_date ? $c->last_contacted_date->format('Y-m-d') : '',
-            'next_followup'       => $c->next_follow_up_date ? $c->next_follow_up_date->format('d M Y') : '',
-            'next_followup_raw'   => $c->next_follow_up_date ? $c->next_follow_up_date->format('Y-m-d') : '',
-            'follow_up_days'      => $c->follow_up_days ?? '',
-            'notes'               => $c->notes ?? '',
-            'assigned_user'       => $c->assignedUser ? $c->assignedUser->name : 'Unassigned',
-            'assigned_to'         => $c->assigned_to,
-            'initials'            => collect(explode(' ', $c->name))->map(fn($n) => mb_substr($n,0,1))->take(2)->join(''),
-            'show_url'            => route('clients.show', $c),
-            'edit_url'            => route('clients.edit', $c),
-            'quick_update_url'    => route('kanban.quick-update', $c),
-        ];
-    })->toJson() }},
+    clientsByStatus: {
+        @foreach($statuses as $status)
+            '{{ $status }}': [],
+        @endforeach
+    },
+    counts: {
+        @foreach($statuses as $status)
+            '{{ $status }}': 0,
+        @endforeach
+    },
+    loadingStatus: {
+        @foreach($statuses as $status)
+            '{{ $status }}': false,
+        @endforeach
+    },
+    pages: {
+        @foreach($statuses as $status)
+            '{{ $status }}': 1,
+        @endforeach
+    },
+    hasMore: {
+        @foreach($statuses as $status)
+            '{{ $status }}': true,
+        @endforeach
+    },
     users: {{ collect($users)->map(fn($u) => ['id'=>$u->id,'name'=>$u->name])->toJson() }},
     allCountries: {{ json_encode(App\Helpers\CountryHelper::getAllCountries()) }},
+    locations: {{ json_encode($locations) }},
 
     statuses: {{ json_encode($statuses) }},
     draggingId: null,
@@ -858,6 +928,7 @@
     search: '',
     techFilter: '',
     assignedFilter: '',
+    locationFilter: '',
     dateFilter: '',
     dateStart: null,
     dateEnd: null,
@@ -865,6 +936,7 @@
 
     /* Modal state */
     cardModal: false,
+    filterDrawer: false,
     modalClient: null,
     modalForm: {},
     modalSaving: false,
@@ -923,6 +995,99 @@
             .catch(err => {
                 console.error('Failed to load templates:', err);
             });
+
+        // Watchers for filters
+        this.$watch('search', () => this.reloadBoard());
+        this.$watch('techFilter', () => this.reloadBoard());
+        this.$watch('assignedFilter', () => this.reloadBoard());
+        this.$watch('locationFilter', () => this.reloadBoard());
+        this.$watch('dateStart', () => this.reloadBoard());
+        this.$watch('dateEnd', () => this.reloadBoard());
+
+        // Initial load
+        this.reloadBoard();
+    },
+
+    getFilters() {
+        return {
+            search: this.search,
+            technology: this.techFilter,
+            assigned_to: this.assignedFilter,
+            location: this.locationFilter,
+            date_start: this.dateStart ? (this.dateStart instanceof Date ? this.dateStart.toISOString().split('T')[0] : this.dateStart) : '',
+            date_end: this.dateEnd ? (this.dateEnd instanceof Date ? this.dateEnd.toISOString().split('T')[0] : this.dateEnd) : '',
+        };
+    },
+
+    hasActiveFilters() {
+        return !!(this.search || this.techFilter || this.assignedFilter || this.locationFilter || this.dateFilter);
+    },
+
+    reloadBoard() {
+        this.statuses.forEach(status => {
+            this.pages[status] = 1;
+            this.hasMore[status] = true;
+            this.clientsByStatus[status] = [];
+            this.counts[status] = 0;
+            this.loadingStatus[status] = true;
+        });
+
+        axios.get('{{ route('kanban.board-data') }}', { params: this.getFilters() })
+            .then(res => {
+                this.statuses.forEach(status => {
+                    this.clientsByStatus[status] = res.data.cards[status] || [];
+                    this.counts[status] = res.data.counts[status] || 0;
+                    this.hasMore[status] = res.data.has_more[status] ?? false;
+                    this.loadingStatus[status] = false;
+                });
+            })
+            .catch(err => {
+                console.error('Failed to load board data:', err);
+                this.statuses.forEach(status => {
+                    this.loadingStatus[status] = false;
+                });
+            });
+    },
+
+    fetchColumnCards(status, page, append = true) {
+        if (this.loadingStatus[status]) return;
+        this.loadingStatus[status] = true;
+
+        const params = {
+            ...this.getFilters(),
+            status: status,
+            page: page,
+            per_page: 15
+        };
+
+        axios.get('{{ route('kanban.column-cards') }}', { params })
+            .then(res => {
+                const newCards = res.data.cards || [];
+                if (append) {
+                    this.clientsByStatus[status] = [...this.clientsByStatus[status], ...newCards];
+                } else {
+                    this.clientsByStatus[status] = newCards;
+                }
+                this.hasMore[status] = res.data.has_more ?? false;
+                this.loadingStatus[status] = false;
+            })
+            .catch(err => {
+                console.error(`Failed to load cards for status ${status}:`, err);
+                this.loadingStatus[status] = false;
+            });
+    },
+
+    loadMore(status) {
+        if (this.loadingStatus[status] || !this.hasMore[status]) return;
+        this.pages[status]++;
+        this.fetchColumnCards(status, this.pages[status], true);
+    },
+
+    handleScroll(e, status) {
+        const el = e.target;
+        if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
+            this.loadMore(status);
+        }
     },
 
     clearDateFilter() {
@@ -934,51 +1099,60 @@
         }
     },
 
-    filtered(status){
-        return this.clients.filter(c=>{
-            if(c.status!==status) return false;
-            if(this.search){
-                const t=this.search.toLowerCase();
-                if(!c.name.toLowerCase().includes(t)&&!c.email.toLowerCase().includes(t)&&
-                   !c.technology.toLowerCase().includes(t)&&!c.location.toLowerCase().includes(t)) return false;
-            }
-            if(this.techFilter && !c.technology.toLowerCase().includes(this.techFilter.toLowerCase())) return false;
-            if(this.assignedFilter && c.assigned_to!=this.assignedFilter) return false;
-
-            if (this.dateStart && this.dateEnd) {
-                if (!c.next_followup_raw) return false;
-                // Parse date comparison safely
-                const clientDate = new Date(c.next_followup_raw);
-                clientDate.setHours(0,0,0,0);
-                const start = new Date(this.dateStart); start.setHours(0,0,0,0);
-                const end = new Date(this.dateEnd); end.setHours(0,0,0,0);
-                if (clientDate < start || clientDate > end) return false;
-            }
-            return true;
-        });
-    },
-
     dragStart(e,id){
         this.draggingId=id;
         e.dataTransfer.setData('text/plain',id);
         setTimeout(()=>{ const el=document.getElementById('kc-'+id); if(el) el.style.opacity='.4'; },0);
     },
+
     dragEnd(e,id){
         const el=document.getElementById('kc-'+id); if(el) el.style.opacity='1';
         this.draggingId=null; this.overStatus=null;
     },
+
     dragOver(e,s){ e.preventDefault(); this.overStatus=s; },
     dragLeave(){ this.overStatus=null; },
+
     drop(e,status){
         e.preventDefault(); this.overStatus=null;
         if(!this.draggingId) return;
         const id=this.draggingId;
-        const client=this.clients.find(c=>c.id==id);
-        if(!client||client.status===status) return;
-        const old=client.status; client.status=status;
+        
+        let client = null;
+        let oldStatus = null;
+        
+        for (let s of this.statuses) {
+            let idx = this.clientsByStatus[s].findIndex(c => c.id == id);
+            if (idx > -1) {
+                client = this.clientsByStatus[s][idx];
+                oldStatus = s;
+                this.clientsByStatus[s].splice(idx, 1);
+                this.counts[s]--;
+                break;
+            }
+        }
+        
+        if(!client||oldStatus===status) return;
+        
+        client.status = status;
+        this.clientsByStatus[status].unshift(client);
+        this.counts[status]++;
+        
         axios.post('{{ route('kanban.update-status') }}',{client_id:id,status})
             .then(()=>window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Status updated successfully.', type: 'success' } })))
-            .catch(err=>{ client.status=old; window.dispatchEvent(new CustomEvent('toast', { detail: { message: err.response?.data?.error || 'Permission denied', type: 'error' } })); });
+            .catch(err=>{
+                // Revert
+                let idx = this.clientsByStatus[status].findIndex(c => c.id == id);
+                if (idx > -1) {
+                    this.clientsByStatus[status].splice(idx, 1);
+                    this.counts[status]--;
+                }
+                client.status = oldStatus;
+                this.clientsByStatus[oldStatus].unshift(client);
+                this.counts[oldStatus]++;
+                
+                window.dispatchEvent(new CustomEvent('toast', { detail: { message: err.response?.data?.error || 'Permission denied', type: 'error' } }));
+            });
     },
 
     deleteClient(id,name){
@@ -1103,16 +1277,13 @@
             navigator.clipboard.writeText(text);
         }
         
-        // Show success alert
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: 'Copied to clipboard!',
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true
-        });
+        // Show success toast
+        window.dispatchEvent(new CustomEvent('toast', {
+            detail: {
+                message: 'Copied to clipboard!',
+                type: 'success'
+            }
+        }));
     },
 
     async saveCard(){
@@ -1121,9 +1292,14 @@
         try {
             const res = await axios.patch(this.modalClient.quick_update_url, this.modalForm);
             const updated = res.data.client;
-            const idx = this.clients.findIndex(c => c.id === this.modalClient.id);
+            
+            // Find in current status list
+            let oldStatus = this.modalClient.status;
+            let idx = this.clientsByStatus[oldStatus].findIndex(c => c.id === this.modalClient.id);
+            
             if(idx > -1){
-                Object.assign(this.clients[idx], {
+                const clientObj = this.clientsByStatus[oldStatus][idx];
+                const updatedProps = {
                     name:              updated.name,
                     email:             updated.email,
                     mobile_no:         updated.mobile_no,
@@ -1150,8 +1326,20 @@
                     source_url:        updated.source_url,
                     project_link:      updated.project_link,
                     is_overdue:        updated.is_overdue,
-                });
-                this.modalClient = this.clients[idx];
+                };
+                
+                if (updated.status !== oldStatus) {
+                    // Status changed, remove from old list and add to new list
+                    this.clientsByStatus[oldStatus].splice(idx, 1);
+                    this.counts[oldStatus]--;
+                    
+                    Object.assign(clientObj, updatedProps);
+                    this.clientsByStatus[updated.status].unshift(clientObj);
+                    this.counts[updated.status]++;
+                } else {
+                    Object.assign(clientObj, updatedProps);
+                }
+                this.modalClient = clientObj;
             }
             window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Client updated successfully.', type: 'success' } }));
             this.closeCard();
@@ -1241,7 +1429,8 @@
         try {
             const res = await axios.post('{{ route('clients.store') }}', this.createForm);
             const newClient = res.data.client;
-            this.clients.unshift(newClient);
+            this.clientsByStatus[newClient.status].unshift(newClient);
+            this.counts[newClient.status]++;
             window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Client created successfully.', type: 'success' } }));
             this.closeCreateModal();
         } catch(err) {
@@ -1254,134 +1443,252 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <x-common.page-breadcrumb pageTitle="Clients Board" />
-        @if(auth()->check())
-        <button type="button" @click="openCreateModal()"
-           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M10 5v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            Add Client
-        </button>
-        @endif
+        <div class="flex items-center gap-4 flex-wrap">
+            <x-common.page-breadcrumb pageTitle="Clients Board" />
+        </div>
+        <div class="flex items-center gap-2">
+            {{-- Active filter badges --}}
+            <div class="kb-filter-badges" x-show="hasActiveFilters()" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                <template x-if="search">
+                    <span class="kb-filter-badge">Search: <strong x-text="search"></strong> <button @click="search=''" class="kb-badge-remove">×</button></span>
+                </template>
+                <template x-if="techFilter">
+                    <span class="kb-filter-badge">Tech: <strong x-text="techFilter"></strong> <button @click="techFilter=''" class="kb-badge-remove">×</button></span>
+                </template>
+                <template x-if="assignedFilter">
+                    <span class="kb-filter-badge">Member assigned <button @click="assignedFilter=''" class="kb-badge-remove">×</button></span>
+                </template>
+                <template x-if="locationFilter">
+                    <span class="kb-filter-badge">Location: <strong x-text="locationFilter"></strong> <button @click="locationFilter=''" class="kb-badge-remove">×</button></span>
+                </template>
+                <template x-if="dateFilter">
+                    <span class="kb-filter-badge">Date: <strong x-text="dateFilter"></strong> <button @click="clearDateFilter()" class="kb-badge-remove">×</button></span>
+                </template>
+                <button @click="search=''; techFilter=''; assignedFilter=''; locationFilter=''; clearDateFilter();" class="kb-clear-all">Clear all</button>
+            </div>
+            <button type="button" @click="filterDrawer = true"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-750 relative">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                <span>Filter</span>
+                <span x-show="hasActiveFilters()" class="flex h-2.5 w-2.5" style="position: absolute; top: -3px; right: -3px;">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span>
+                </span>
+            </button>
+            @if(auth()->check())
+            <button type="button" @click="openCreateModal()"
+               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M10 5v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                Add Client
+            </button>
+            @endif
+        </div>
     </div>
 
-    {{-- Filters --}}
-    <div class="kb-filter-bar">
-        <div class="kb-filter-label">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-            </svg>
-            <span>Filters</span>
-        </div>
-        <div class="kb-filter-inputs">
-            {{-- Search --}}
-            <div class="kb-filter-field">
-                <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input type="text" x-model="search" placeholder="Search clients…" class="kb-filter-input">
-                <button x-show="search" @click="search=''" class="kb-filter-clear" title="Clear">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    {{-- Filter Drawer (Slide-over panel) --}}
+    <div x-show="filterDrawer" x-cloak class="kb-drawer-overlay" @click.self="filterDrawer = false">
+        <div class="kb-drawer-panel"
+             x-show="filterDrawer"
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full"
+             @keydown.escape.window="filterDrawer = false">
+             
+            {{-- Drawer Header --}}
+            <div class="kb-drawer-header">
+                <div class="kb-drawer-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                    <span>Filters</span>
+                </div>
+                <button class="kb-drawer-close" @click="filterDrawer = false" title="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-
-            {{-- Technology --}}
-            <div class="kb-filter-field">
-                <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                </svg>
-                <input type="text" x-model="techFilter" placeholder="Filter by technology…" class="kb-filter-input">
-                <button x-show="techFilter" @click="techFilter=''" class="kb-filter-clear" title="Clear">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-
-            {{-- Team Member --}}
-            @if(auth()->user()->role !== 'employee')
-            <div class="kb-filter-field" x-data="{
-                open: false,
-                search: '',
-                get filteredUsers() {
-                    let list = [{id: '', name: 'All Team Members'}, ...users];
-                    if (!this.search) return list;
-                    return list.filter(u => u.name.toLowerCase().includes(this.search.toLowerCase()));
-                },
-                getUserName() {
-                    let found = users.find(u => u.id == assignedFilter);
-                    return found ? found.name : 'All Team Members';
-                },
-                select(id) {
-                    assignedFilter = id;
-                    this.open = false;
-                    this.search = '';
-                }
-            }">
-                <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                    class="kb-filter-input text-left cursor-pointer flex items-center justify-between"
-                    style="height: 100%; border: none; background: transparent; padding-right: 28px; width: 100%;">
-                    <span x-text="getUserName()"></span>
-                </button>
-                <svg class="kb-select-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-                <div x-show="open" @click.away="open = false" x-cloak
-                    class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-955"
-                    style="max-height: 250px; overflow: hidden; display: flex; flex-direction: column; top: 100%;">
-                    <div class="mb-1.5 flex-shrink-0">
-                        <input type="text" x-model="search" x-ref="searchInput" placeholder="Search user..."
-                            class="kdm-input w-full" style="height: auto;">
+            
+            {{-- Drawer Body --}}
+            <div class="kb-drawer-body">
+                {{-- Search --}}
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Search Client</span>
+                    <div class="kb-filter-field">
+                        <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" x-model.debounce.500ms="search" placeholder="Search clients…" class="kb-filter-input">
+                        <button x-show="search" @click="search=''" class="kb-filter-clear" title="Clear">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
                     </div>
-                    <ul class="overflow-y-auto space-y-0.5 text-xs text-gray-700 dark:text-gray-300 flex-1 kb-scroll">
-                        <template x-for="u in filteredUsers" :key="u.id">
-                            <li @click="select(u.id)"
-                                class="cursor-pointer rounded px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white flex items-center justify-between"
-                                :class="assignedFilter == u.id ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400 font-medium' : ''">
-                                <span x-text="u.name"></span>
-                                <svg x-show="assignedFilter == u.id" class="h-3.5 w-3.5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </li>
-                        </template>
-                        <template x-if="filteredUsers.length === 0">
-                            <li class="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 italic">No matches</li>
-                        </template>
-                    </ul>
+                </div>
+
+                {{-- Technology --}}
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Technology</span>
+                    <div class="kb-filter-field">
+                        <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                        </svg>
+                        <input type="text" x-model.debounce.500ms="techFilter" placeholder="Filter by technology…" class="kb-filter-input">
+                        <button x-show="techFilter" @click="techFilter=''" class="kb-filter-clear" title="Clear">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Team Member --}}
+                @if(auth()->user()->role !== 'employee')
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Assigned Team Member</span>
+                    <div class="kb-filter-field" x-data="{
+                        open: false,
+                        search: '',
+                        get filteredUsers() {
+                            let list = [{id: '', name: 'All Team Members'}, ...users];
+                            if (!this.search) return list;
+                            return list.filter(u => u.name.toLowerCase().includes(this.search.toLowerCase()));
+                        },
+                        getUserName() {
+                            let found = users.find(u => u.id == assignedFilter);
+                            return found ? found.name : 'All Team Members';
+                        },
+                        select(id) {
+                            assignedFilter = id;
+                            this.open = false;
+                            this.search = '';
+                        }
+                    }">
+                        <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                            class="kb-filter-input text-left cursor-pointer flex items-center justify-between"
+                            style="height: 100%; border: none; background: transparent; padding-right: 28px; width: 100%;">
+                            <span x-text="getUserName()"></span>
+                        </button>
+                        <svg class="kb-select-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-955"
+                            style="max-height: 250px; overflow: hidden; display: flex; flex-direction: column; top: 100%;">
+                            <div class="mb-1.5 flex-shrink-0">
+                                <input type="text" x-model="search" x-ref="searchInput" placeholder="Search user..."
+                                    class="kdm-input w-full" style="height: auto;">
+                            </div>
+                            <ul class="overflow-y-auto space-y-0.5 text-xs text-gray-700 dark:text-gray-300 flex-1 kb-scroll">
+                                <template x-for="u in filteredUsers" :key="u.id">
+                                    <li @click="select(u.id)"
+                                        class="cursor-pointer rounded px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white flex items-center justify-between"
+                                        :class="assignedFilter == u.id ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400 font-medium' : ''">
+                                        <span x-text="u.name"></span>
+                                        <svg x-show="assignedFilter == u.id" class="h-3.5 w-3.5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </li>
+                                </template>
+                                <template x-if="filteredUsers.length === 0">
+                                    <li class="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 italic">No matches</li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                @else
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Assigned Team Member</span>
+                    <div class="kb-filter-field kb-filter-field--info" style="height: 40px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Employee view — your clients only</span>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Location Filter --}}
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Location</span>
+                    <div class="kb-filter-field" x-data="{
+                        open: false,
+                        search: '',
+                        get filteredLocations() {
+                            let list = ['', ...locations];
+                            if (!this.search) return list;
+                            return list.filter(loc => loc.toLowerCase().includes(this.search.toLowerCase()));
+                        },
+                        getLocationName() {
+                            return locationFilter ? locationFilter : 'All Locations';
+                        },
+                        select(loc) {
+                            locationFilter = loc;
+                            this.open = false;
+                            this.search = '';
+                        }
+                    }">
+                        <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                            class="kb-filter-input text-left cursor-pointer flex items-center justify-between"
+                            style="height: 100%; border: none; background: transparent; padding-right: 28px; width: 100%;">
+                            <span x-text="getLocationName()"></span>
+                        </button>
+                        <svg class="kb-select-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-955"
+                            style="max-height: 250px; overflow: hidden; display: flex; flex-direction: column; top: 100%;">
+                            <div class="mb-1.5 flex-shrink-0">
+                                <input type="text" x-model="search" x-ref="searchInput" placeholder="Search location..."
+                                    class="kdm-input w-full" style="height: auto;">
+                            </div>
+                            <ul class="overflow-y-auto space-y-0.5 text-xs text-gray-700 dark:text-gray-300 flex-1 kb-scroll">
+                                <template x-for="loc in filteredLocations" :key="loc">
+                                    <li @click="select(loc)"
+                                        class="cursor-pointer rounded px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white flex items-center justify-between"
+                                        :class="locationFilter == loc ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400 font-medium' : ''">
+                                        <span x-text="loc ? loc : 'All Locations'"></span>
+                                        <svg x-show="locationFilter == loc" class="h-3.5 w-3.5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </li>
+                                </template>
+                                <template x-if="filteredLocations.length === 0">
+                                    <li class="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 italic">No matches</li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Date Range Filter --}}
+                <div class="kb-drawer-field">
+                    <span class="kb-drawer-label">Follow-up Date Range</span>
+                    <div class="kb-filter-field">
+                        <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <input type="text" x-model="dateFilter" placeholder="Filter by follow-up range…" class="kb-filter-input kb-filter-date-picker">
+                        <button x-show="dateFilter" @click="clearDateFilter()" class="kb-filter-clear" title="Clear">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-            @else
-            <div class="kb-filter-field kb-filter-field--info">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span>Employee view — your clients only</span>
-            </div>
-            @endif
-
-            {{-- Date Range Filter --}}
-            <div class="kb-filter-field">
-                <svg class="kb-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <input type="text" x-model="dateFilter" placeholder="Filter by follow-up range…" class="kb-filter-input kb-filter-date-picker">
-                <button x-show="dateFilter" @click="clearDateFilter()" class="kb-filter-clear" title="Clear">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            
+            {{-- Drawer Footer (actions) --}}
+            <div class="kb-drawer-header" style="border-top: 1px solid #e4e6ea; border-bottom: none; padding: 16px 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" @click="search=''; techFilter=''; assignedFilter=''; locationFilter=''; clearDateFilter(); filterDrawer = false;" 
+                        class="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition dark:text-gray-400 dark:hover:text-gray-200">
+                    Reset & Close
+                </button>
+                <button type="button" @click="filterDrawer = false" 
+                        class="rounded-lg bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition">
+                    Apply
                 </button>
             </div>
-        </div>
-
-        {{-- Active filter badges --}}
-        <div class="kb-filter-badges" x-show="search || techFilter || assignedFilter || dateFilter">
-            <template x-if="search">
-                <span class="kb-filter-badge">Search: <strong x-text="search"></strong> <button @click="search=''" class="kb-badge-remove">×</button></span>
-            </template>
-            <template x-if="techFilter">
-                <span class="kb-filter-badge">Tech: <strong x-text="techFilter"></strong> <button @click="techFilter=''" class="kb-badge-remove">×</button></span>
-            </template>
-            <template x-if="assignedFilter">
-                <span class="kb-filter-badge">Member assigned <button @click="assignedFilter=''" class="kb-badge-remove">×</button></span>
-            </template>
-            <template x-if="dateFilter">
-                <span class="kb-filter-badge">Date: <strong x-text="dateFilter"></strong> <button @click="clearDateFilter()" class="kb-badge-remove">×</button></span>
-            </template>
-            <button @click="search=''; techFilter=''; assignedFilter=''; clearDateFilter();" class="kb-clear-all">Clear all</button>
         </div>
     </div>
 
@@ -1410,17 +1717,12 @@
                                     <path d="M12 5v14M5 12h14" />
                                 </svg>
                                 @endif
-                                <!-- <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                                </svg>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-                                </svg> -->
                             </div>
                         </div>
 
                         {{-- Scrollable card area --}}
                         <div class="kb-cards kb-scroll"
+                            @scroll="handleScroll($event, status)"
                             @dragover="dragOver($event, status)"
                             @dragleave="dragLeave()"
                             @drop="drop($event, status)"
@@ -1434,12 +1736,12 @@
                                 </div>
                                 <div class="kb-banner-foot">
                                     <span x-text="status"></span>
-                                    <span class="kb-banner-count" x-text="filtered(status).length"></span>
+                                    <span class="kb-banner-count" x-text="counts[status]"></span>
                                 </div>
                             </div>
 
                             {{-- Client cards --}}
-                            <template x-for="client in filtered(status)" :key="client.id">
+                            <template x-for="client in clientsByStatus[status]" :key="client.id">
                                 <div :id="'kc-'+client.id"
                                      class="kb-card"
                                      :title="client.name"
@@ -1462,18 +1764,6 @@
                                         </div>
                                         {{-- Actions --}}
                                         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;" title="">
-                                            {{-- Edit Button --}}
-                                            <!-- <a :href="client.edit_url"
-                                               @click.stop
-                                               :title="'Edit Client'"
-                                               style="color:#97a0af;padding:2px;display:flex;align-items:center;transition:color 0.1s;"
-                                               onmouseover="this.style.color='#0079bf'"
-                                               onmouseout="this.style.color='#97a0af'">
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><title>Edit Client</title>
-                                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                                                </svg>
-                                            </a> -->
-
                                             {{-- Delete Button --}}
                                             <button @click.stop="deleteClient(client.id, client.name)"
                                                     :title="'Delete Client'"
@@ -1484,21 +1774,6 @@
                                                     <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
                                                 </svg>
                                             </button>
-
-                                            {{-- Dropdown Menu --}}
-                                            <!-- <div x-data="{open:false}" style="position:relative;">
-                                                <button @click.stop="open=!open" style="background:none;border:none;cursor:pointer;color:#97a0af;padding:2px;display:flex;align-items:center;">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                                        <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-                                                    </svg>
-                                                </button>
-                                                <div x-show="open" @click.away="open=false" x-cloak
-                                                    style="position:absolute;right:0;top:20px;z-index:50;background:#fff;border:1px solid #e4e6ea;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);width:130px;padding:4px;">
-                                                    <a :href="client.show_url" @click.stop style="display:block;padding:6px 12px;font-size:11px;color:#42526e;text-decoration:none;border-radius:5px;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background=''">View Detail</a>
-                                                    <a :href="client.edit_url" @click.stop style="display:block;padding:6px 12px;font-size:11px;color:#42526e;text-decoration:none;border-radius:5px;" onmouseover="this.style.background='#f4f5f7'" onmouseout="this.style.background=''">Edit Client</a>
-                                                    <button @click.stop="deleteClient(client.id,client.name)" style="width:100%;text-align:left;padding:6px 12px;font-size:11px;color:#de350b;background:none;border:none;cursor:pointer;border-radius:5px;" onmouseover="this.style.background='#ffebe6'" onmouseout="this.style.background=''">Delete</button>
-                                                </div>
-                                            </div> -->
                                         </div>
                                     </div>
 
@@ -1538,8 +1813,16 @@
                                 </div>
                             </template>
 
+                            {{-- Loading spinner --}}
+                            <div x-show="loadingStatus[status]" class="flex justify-center items-center py-4 text-gray-400 dark:text-gray-500">
+                                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+
                             {{-- Empty placeholder --}}
-                            <div x-show="filtered(status).length===0" class="kb-empty-placeholder"
+                            <div x-show="clientsByStatus[status].length===0 && !loadingStatus[status]" class="kb-empty-placeholder"
                                  @click="openCreateModal(status)">
                                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;opacity:0.6;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

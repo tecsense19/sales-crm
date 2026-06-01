@@ -162,7 +162,7 @@
         <div class="container">
             <div class="header">
                 <h1>Action Required: Overdue Follow-ups</h1>
-                <p>TailAdmin CRM • {{ now()->format('l, F j, Y') }}</p>
+                <p>Sales CRM • {{ now()->format('l, F j, Y') }}</p>
             </div>
             
             <div class="content">
@@ -221,8 +221,8 @@
             </div>
             
             <div class="footer">
-                <p>This is an automated reminder sent from your <strong>TailAdmin Dashboard</strong>.</p>
-                <p>&copy; {{ date('Y') }} TailAdmin. All rights reserved.</p>
+                <p>This is an automated reminder sent from your <strong>Sales CRM Dashboard</strong>.</p>
+                <p>&copy; {{ date('Y') }} Sales CRM. All rights reserved.</p>
             </div>
         </div>
     </div>

@@ -33,9 +33,25 @@ class ClientController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter by Location
+        if ($request->filled('location')) {
+            $query->where('location', $request->location);
+        }
+
+        $locationsQuery = Client::query();
+        if (auth()->check() && auth()->user()->role === 'employee') {
+            $locationsQuery->where('assigned_to', auth()->id());
+        }
+        $locations = $locationsQuery->whereNotNull('location')
+            ->where('location', '!=', '')
+            ->distinct()
+            ->orderBy('location')
+            ->pluck('location')
+            ->toArray();
+
         $clients = $query->with('assignedUser')->latest()->paginate(10);
 
-        return view('pages.clients.index', compact('clients'));
+        return view('pages.clients.index', compact('clients', 'locations'));
     }
 
     public function create()

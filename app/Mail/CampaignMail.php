@@ -29,12 +29,17 @@ class CampaignMail extends Mailable
     protected function parseBody($body, $recipient)
     {
         $placeholders = [
-            '{{name}}' => $recipient['name'] ?? 'Client',
+            '{{name}}' => $recipient['name'] ?? '',
             '{{email}}' => $recipient['email'] ?? '',
-            '{{location}}' => $recipient['location'] ?? 'N/A',
+            '{{location}}' => $recipient['location'] ?? '',
+            '{name}' => $recipient['name'] ?? '',
+            '{email}' => $recipient['email'] ?? '',
+            '{location}' => $recipient['location'] ?? '',
         ];
 
-        return str_replace(array_keys($placeholders), array_values($placeholders), $body);
+        $replaced = str_replace(array_keys($placeholders), array_values($placeholders), $body);
+        $replaced = preg_replace('/\{\{\s*[a-zA-Z0-9_-]+\s*\}\}/', '', $replaced);
+        return preg_replace('/\{\s*[a-zA-Z0-9_-]+\s*\}/', '', $replaced);
     }
 
     /**

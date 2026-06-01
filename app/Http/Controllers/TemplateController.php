@@ -13,7 +13,16 @@ class TemplateController extends Controller
             abort(403);
         }
 
-        $templates = Template::orderBy('name')->get();
+        $query = Template::query();
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('subject', 'like', "%{$search}%")
+                  ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+        $templates = $query->orderBy('name')->get();
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -97,5 +106,21 @@ class TemplateController extends Controller
         $template->delete();
 
         return redirect()->route('templates.index')->with('success', 'Template deleted successfully.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:templates,id',
+        ]);
+
+        Template::whereIn('id', $validated['ids'])->delete();
+
+        return redirect()->route('templates.index')->with('success', 'Selected templates deleted successfully.');
     }
 }

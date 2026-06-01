@@ -34,7 +34,14 @@
                         <h2 class="text-xl font-bold text-gray-800 dark:text-white">{{ $campaign->subject }}</h2>
                     </div>
                     <div class="prose prose-sm dark:prose-invert max-w-none border-t border-gray-100 pt-6 dark:border-gray-800">
-                        {!! nl2br(e($campaign->body)) !!}
+                        @php
+                            $isHtml = strip_tags($campaign->body) !== $campaign->body;
+                        @endphp
+                        @if($isHtml)
+                            {!! $campaign->body !!}
+                        @else
+                            {!! nl2br(e($campaign->body)) !!}
+                        @endif
                     </div>
                 </div>
             </div>

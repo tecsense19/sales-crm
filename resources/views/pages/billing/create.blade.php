@@ -5,7 +5,8 @@
         <x-common.page-breadcrumb pageTitle="Create New Invoice" />
     </div>
 
-    <form action="{{ route('billing.store') }}" method="POST" class="max-w-5xl mx-auto space-y-6">
+    <!-- max-w-5xl -->
+    <form action="{{ route('billing.store') }}" method="POST" class="mx-auto space-y-6"> 
         @csrf
         <input type="hidden" name="invoice_number" value="{{ $nextInvoiceNumber }}">
         

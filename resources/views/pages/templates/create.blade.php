@@ -58,8 +58,12 @@
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                         Template Content <span class="text-error-500">*</span>
                     </label>
-                    <textarea name="content" rows="12" placeholder="Hi {client_name}, ..." required
-                        class="dark:bg-dark-900 shadow-theme-xs w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-700 dark:text-white/90 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition font-mono">{{ old('content') }}</textarea>
+                    <div class="dark:bg-dark-900 shadow-theme-xs w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-sm text-gray-800 dark:text-white/90 focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 transition overflow-hidden">
+                        <div id="editor-container" style="min-height: 300px;" class="bg-white dark:bg-dark-950 text-gray-800 dark:text-white/90 border-0">
+                            {!! old('content') !!}
+                        </div>
+                    </div>
+                    <input type="hidden" name="content" id="content-input" value="{{ old('content') }}" />
                     
                     <div class="mt-3 rounded-xl bg-brand-50 p-4 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20">
                         <h5 class="text-xs font-bold text-brand-800 dark:text-brand-400 mb-1.5">Template Variables / Placeholders</h5>
@@ -89,4 +93,73 @@
             </button>
         </div>
     </form>
+
+    @push('scripts')
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <style>
+        /* Quill Dark Mode Adjustments */
+        .dark .ql-toolbar {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        .dark .ql-toolbar .ql-stroke {
+            stroke: #d1d5db !important;
+        }
+        .dark .ql-toolbar .ql-fill {
+            fill: #d1d5db !important;
+        }
+        .dark .ql-toolbar .ql-picker {
+            color: #d1d5db !important;
+        }
+        .dark .ql-container {
+            border-color: #374151 !important;
+            background-color: #111827 !important;
+        }
+        .dark .ql-editor {
+            color: #f3f4f6 !important;
+        }
+        .ql-toolbar {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border-color: #e5e7eb !important;
+        }
+        .ql-container {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            border-color: #e5e7eb !important;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('editor-container');
+            if (!container) return;
+
+            const quill = new Quill('#editor-container', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'clean']
+                    ]
+                }
+            });
+
+            // Sync editor html to hidden input on form submit
+            const form = container.closest('form');
+            form.addEventListener('submit', function(e) {
+                const contentInput = document.getElementById('content-input');
+                const html = quill.root.innerHTML;
+                if (html === '<p><br></p>' || html === '') {
+                    contentInput.value = '';
+                } else {
+                    contentInput.value = html;
+                }
+            });
+        });
+    </script>
+    @endpush
 @endsection

@@ -6,8 +6,9 @@
     </div>
 
     <form action="{{ route('campaigns.store') }}" method="POST" enctype="multipart/form-data" 
-        x-data="{ targetStatus: 'none', selectedClients: [], fileName: '' }" 
+        x-data="{ targetStatus: 'none', selectedClients: [], fileName: '', dragOver: false, selectedTemplate: '', subject: '', content: '', templates: @js($templates) }" 
         x-init="$watch('targetStatus', value => { if (value !== 'custom') selectedClients = [] })"
+        @submit="if (targetStatus === 'none' && !fileName) { $event.preventDefault(); window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Please upload an external CSV/Excel file when targeting only external recipients.', type: 'error' } })); }"
         class="space-y-6">
         @csrf
         
@@ -31,7 +32,7 @@
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Subject Line <span class="text-error-500">*</span>
                         </label>
-                        <input type="text" name="subject" placeholder="What your clients will see in their inbox" required
+                        <input type="text" name="subject" x-model="subject" placeholder="What your clients will see in their inbox" required
                             class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90" />
                     </div>
                 </div>
@@ -102,10 +103,53 @@
             </div>
             <div class="p-7 space-y-6">
                 <div class="rounded-2xl border-2 border-dashed border-gray-200 p-10 text-center dark:border-gray-800 transition-colors hover:border-brand-500 h-full flex flex-col justify-center min-h-[250px]"
-                    :class="fileName ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-500/5' : ''">
-                    <input type="file" name="external_file" id="external-file-upload" class="hidden" accept=".csv,.xlsx,.xls" 
-                        @change="fileName = $event.target.files[0] ? $event.target.files[0].name : ''" />
-                    <label for="external-file-upload" class="cursor-pointer block">
+                    :class="fileName || dragOver ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-500/5' : ''"
+                    @dragover.prevent="dragOver = true"
+                    @dragenter.prevent="dragOver = true"
+                    @dragleave.prevent="dragOver = false"
+                    @drop.prevent="
+                        dragOver = false;
+                        const files = $event.dataTransfer.files;
+                        if (files && files.length > 0) {
+                            const file = files[0];
+                            const allowed = ['csv', 'xlsx', 'xls'];
+                            const ext = file.name.split('.').pop().toLowerCase();
+                            if (!allowed.includes(ext)) {
+                                window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Invalid file format. Please upload CSV, XLSX or XLS files only.', type: 'error' } }));
+                                return;
+                            }
+                            if (file.size > 10 * 1024 * 1024) {
+                                window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'File is too large. Maximum size allowed is 10MB.', type: 'error' } }));
+                                return;
+                            }
+                            $refs.externalFileInput.files = files;
+                            fileName = file.name;
+                        }
+                    ">
+                    <input type="file" name="external_file" id="external-file-upload" class="hidden" accept=".csv,.xlsx,.xls" x-ref="externalFileInput"
+                        @change="
+                            const file = $event.target.files[0];
+                            if (file) {
+                                const allowed = ['csv', 'xlsx', 'xls'];
+                                const ext = file.name.split('.').pop().toLowerCase();
+                                if (!allowed.includes(ext)) {
+                                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Invalid file format. Please upload CSV, XLSX or XLS files only.', type: 'error' } }));
+                                    $event.target.value = '';
+                                    fileName = '';
+                                    return;
+                                }
+                                if (file.size > 10 * 1024 * 1024) {
+                                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'File is too large. Maximum size allowed is 10MB.', type: 'error' } }));
+                                    $event.target.value = '';
+                                    fileName = '';
+                                    return;
+                                }
+                                fileName = file.name;
+                            } else {
+                                fileName = '';
+                            }
+                        " />
+                    <label for="external-file-upload" class="cursor-pointer block w-full h-full">
                         <div class="flex flex-col items-center">
                             <div class="mb-4 text-brand-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -122,28 +166,49 @@
                     </label>
                 </div>
 
-                <div class="rounded-xl bg-brand-50 p-4 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20">
+                <!-- <div class="rounded-xl bg-brand-50 p-4 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20">
                     <h5 class="text-sm font-bold text-brand-800 dark:text-brand-400 mb-1">AI Smart Mapping</h5>
                     <p class="text-xs text-brand-700 dark:text-brand-500/80">
                         Our system will automatically detect and map your email columns.
                     </p>
-                </div>
+                </div> -->
             </div>
         </div>
 
         <!-- Section 4: Content Design -->
         <div class="rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="border-b border-gray-100 px-7 py-5 dark:border-gray-800">
-                <h3 class="font-bold text-gray-800 dark:text-white">Email Content</h3>
-                <p class="text-sm text-gray-500">Design your email message using HTML or plain text.</p>
+            <div class="border-b border-gray-100 px-7 py-5 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-gray-800 dark:text-white">Email Content</h3>
+                    <p class="text-sm text-gray-500">Design your email message using HTML or plain text.</p>
+                </div>
+                <div class="w-full sm:w-auto" style="width: 300px; min-width: 300px;">
+                    <select name="template_id" x-model="selectedTemplate" @change="
+                        const temp = templates.find(t => t.id == selectedTemplate);
+                        if (temp) {
+                            subject = temp.subject;
+                            content = temp.content;
+                        } else {
+                            subject = '';
+                            content = '';
+                        }
+                    " class="dark:bg-dark-900 shadow-theme-xs h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90">
+                        <option value="">-- Choose Template --</option>
+                        @foreach($templates as $temp)
+                            <option value="{{ $temp->id }}">{{ $temp->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
             <div class="p-7 space-y-4">
                 <div>
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                         Content (HTML)
                     </label>
-                    <textarea name="content" rows="12" placeholder="Hello @{{name}}, we have a special offer for you..." required
-                        class="dark:bg-dark-900 shadow-theme-xs w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-700 dark:text-white/90 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition"></textarea>
+                    <div class="dark:bg-dark-900 shadow-theme-xs w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-sm text-gray-800 dark:text-white/90 focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 transition overflow-hidden">
+                        <div id="editor-container" style="min-height: 300px;" class="bg-white dark:bg-dark-950 text-gray-800 dark:text-white/90 border-0"></div>
+                    </div>
+                    <input type="hidden" name="content" x-model="content" id="content-input" />
                     <p class="mt-2 text-xs text-gray-500 italic">Available tags: @{{name}}, @{{email}}, @{{location}}</p>
                 </div>
             </div>
@@ -161,4 +226,97 @@
             </button>
         </div>
     </form>
+
+    @push('scripts')
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <style>
+        /* Quill Dark Mode Adjustments */
+        .dark .ql-toolbar {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        .dark .ql-toolbar .ql-stroke {
+            stroke: #d1d5db !important;
+        }
+        .dark .ql-toolbar .ql-fill {
+            fill: #d1d5db !important;
+        }
+        .dark .ql-toolbar .ql-picker {
+            color: #d1d5db !important;
+        }
+        .dark .ql-container {
+            border-color: #374151 !important;
+            background-color: #111827 !important;
+        }
+        .dark .ql-editor {
+            color: #f3f4f6 !important;
+        }
+        .ql-toolbar {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border-color: #e5e7eb !important;
+        }
+        .ql-container {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            border-color: #e5e7eb !important;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('editor-container');
+            if (!container) return;
+
+            const quill = new Quill('#editor-container', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'clean']
+                    ]
+                }
+            });
+
+            function plainTextToHtml(text) {
+                if (!text) return '';
+                if (text.includes('<p>') || text.includes('<br>') || text.includes('<div>') || text.includes('</')) {
+                    return text;
+                }
+                return text
+                    .split(/\r?\n\r?\n/)
+                    .map(para => {
+                        const cleanPara = para.replace(/\r?\n/g, '<br>');
+                        return `<p>${cleanPara}</p>`;
+                    })
+                    .join('');
+            }
+
+            const form = container.closest('form');
+            setTimeout(() => {
+                const data = Alpine.$data(form);
+                if (data) {
+                    if (data.content) {
+                        quill.root.innerHTML = plainTextToHtml(data.content);
+                    }
+
+                    quill.on('text-change', () => {
+                        const html = quill.root.innerHTML;
+                        data.content = (html === '<p><br></p>' || html === '') ? '' : html;
+                    });
+
+                    data.$watch('content', value => {
+                        const htmlValue = plainTextToHtml(value || '');
+                        if (quill.root.innerHTML !== htmlValue) {
+                            quill.root.innerHTML = htmlValue;
+                        }
+                    });
+                }
+            }, 100);
+        });
+    </script>
+    @endpush
 @endsection

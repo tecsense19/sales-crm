@@ -149,17 +149,17 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-brand-950 relative hidden h-full w-full items-center lg:grid lg:w-1/2 dark:bg-white/5">
+            <div class="relative hidden h-full w-full items-center lg:grid lg:w-1/2 dark:bg-white/5" style="background: linear-gradient(135deg, #0f4aab 0%, #082d6b 60%, #041635 100%);">
                 <div class="z-1 flex items-center justify-center">
                     <!-- ===== Common Grid Shape Start ===== -->
                     <x-common.common-grid-shape />
                     <div class="flex max-w-xs flex-col items-center">
                         <a href="/" class="mb-4 block">
-                            <img src="./images/logo/auth-logo.svg" alt="Logo" />
+                            <img src="./images/logo/auth-brand-logo.png" alt="Logo" />
                         </a>
-                        <p class="text-center text-gray-400 dark:text-white/60">
-                            Free and Open-Source Tailwind CSS Admin Dashboard Template
-                        </p>
+                        <!-- <p class="text-center text-blue-200/90 text-sm tracking-wide font-medium mt-2">
+                            Client CRM Portal
+                        </p> -->
                     </div>
                 </div>
             </div>

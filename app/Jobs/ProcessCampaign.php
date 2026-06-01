@@ -57,14 +57,24 @@ class ProcessCampaign implements ShouldQueue
 
         // 2. Process External Emails (already in memory from campaign record)
         if (!empty($this->campaign->external_emails)) {
-            foreach ($this->campaign->external_emails as $email) {
-                SendCampaignEmail::dispatch($this->campaign, [
-                    'id' => null,
-                    'name' => 'Recipient',
-                    'email' => $email,
-                    'location' => null,
-                    'type' => 'external'
-                ]);
+            foreach ($this->campaign->external_emails as $recipient) {
+                if (is_array($recipient)) {
+                    SendCampaignEmail::dispatch($this->campaign, [
+                        'id' => null,
+                        'name' => $recipient['name'] ?? 'Recipient',
+                        'email' => $recipient['email'],
+                        'location' => $recipient['location'] ?? null,
+                        'type' => 'external'
+                    ]);
+                } else {
+                    SendCampaignEmail::dispatch($this->campaign, [
+                        'id' => null,
+                        'name' => 'Recipient',
+                        'email' => $recipient,
+                        'location' => null,
+                        'type' => 'external'
+                    ]);
+                }
             }
         }
 

@@ -10,7 +10,7 @@ class Campaign extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'subject', 'body', 'status', 'sent_count', 'failed_count', 'target_status', 'scheduled_at', 'selected_clients', 'external_emails'
+        'name', 'template_id', 'subject', 'body', 'status', 'sent_count', 'failed_count', 'target_status', 'scheduled_at', 'selected_clients', 'external_emails'
     ];
 
     protected $casts = [
@@ -18,4 +18,14 @@ class Campaign extends Model
         'selected_clients' => 'array',
         'external_emails' => 'array',
     ];
+
+    public function template()
+    {
+        return $this->belongsTo(Template::class);
+    }
+
+    public function pendingEmails()
+    {
+        return $this->hasMany(PendingEmail::class);
+    }
 }

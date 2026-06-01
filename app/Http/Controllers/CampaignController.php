@@ -10,7 +10,9 @@ class CampaignController extends Controller
 {
     public function index()
     {
-        $campaigns = Campaign::latest()->paginate(10);
+        $campaigns = Campaign::withCount(['pendingEmails as pending_count' => function ($query) {
+            $query->where('status', 'pending');
+        }])->latest()->paginate(10);
         
         $stats = [
             'total_sent' => Campaign::sum('sent_count'),
@@ -25,13 +27,15 @@ class CampaignController extends Controller
     public function create()
     {
         $clients = Client::orderBy('name')->get();
-        return view('pages.campaigns.create', compact('clients'));
+        $templates = \App\Models\Template::orderBy('name')->get();
+        return view('pages.campaigns.create', compact('clients', 'templates'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string',
+            'template_id' => 'nullable|exists:templates,id',
             'subject' => 'required|string',
             'content' => 'required|string',
             'target_status' => 'required|string',
@@ -60,18 +64,63 @@ class CampaignController extends Controller
         if ($request->hasFile('external_file')) {
             try {
                 $rows = \Maatwebsite\Excel\Facades\Excel::toArray([], $request->file('external_file'));
-                $emails = [];
+                $recipients = [];
                 if (!empty($rows[0])) {
-                    foreach ($rows[0] as $row) {
-                        // Look for email in any column
-                        foreach ($row as $cell) {
-                            if (filter_var($cell, FILTER_VALIDATE_EMAIL)) {
-                                $emails[] = $cell;
+                    $headerRow = array_map('strtolower', array_map('trim', $rows[0][0] ?? []));
+                    
+                    // Identify column indices
+                    $emailIdx = -1;
+                    $nameIdx = -1;
+                    $locationIdx = -1;
+                    
+                    foreach ($headerRow as $index => $colName) {
+                        if (in_array($colName, ['email', 'email_address', 'mail', 'email address'])) {
+                            $emailIdx = $index;
+                        } elseif (in_array($colName, ['name', 'client_name', 'full_name', 'client name', 'fullname'])) {
+                            $nameIdx = $index;
+                        } elseif (in_array($colName, ['location', 'country', 'city', 'address'])) {
+                            $locationIdx = $index;
+                        }
+                    }
+                    
+                    // If email header found, map rows
+                    if ($emailIdx !== -1) {
+                        $dataRows = array_slice($rows[0], 1);
+                        foreach ($dataRows as $row) {
+                            $email = isset($row[$emailIdx]) ? trim($row[$emailIdx]) : null;
+                            if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                                $name = ($nameIdx !== -1 && isset($row[$nameIdx])) ? trim($row[$nameIdx]) : 'Recipient';
+                                $location = ($locationIdx !== -1 && isset($row[$locationIdx])) ? trim($row[$locationIdx]) : null;
+                                
+                                $recipients[] = [
+                                    'name' => $name,
+                                    'email' => $email,
+                                    'location' => $location
+                                ];
+                            }
+                        }
+                    } else {
+                        // Fallback logic: scan all cells for emails
+                        foreach ($rows[0] as $row) {
+                            foreach ($row as $cell) {
+                                if (filter_var($cell, FILTER_VALIDATE_EMAIL)) {
+                                    $recipients[] = [
+                                        'name' => 'Recipient',
+                                        'email' => trim($cell),
+                                        'location' => null
+                                    ];
+                                }
                             }
                         }
                     }
                 }
-                $validated['external_emails'] = array_unique($emails);
+                
+                // De-duplicate by email address
+                $uniqueRecipients = [];
+                foreach ($recipients as $recipient) {
+                    $uniqueRecipients[$recipient['email']] = $recipient;
+                }
+                $validated['external_emails'] = array_values($uniqueRecipients);
             } catch (\Exception $e) {
                 return back()->withInput()->with('error', 'Failed to parse external file: ' . $e->getMessage());
             }
@@ -98,13 +147,15 @@ class CampaignController extends Controller
     public function edit(Campaign $campaign)
     {
         $clients = Client::orderBy('name')->get();
-        return view('pages.campaigns.edit', compact('campaign', 'clients'));
+        $templates = \App\Models\Template::orderBy('name')->get();
+        return view('pages.campaigns.edit', compact('campaign', 'clients', 'templates'));
     }
 
     public function update(Request $request, Campaign $campaign)
     {
         $validated = $request->validate([
             'name' => 'required|string',
+            'template_id' => 'nullable|exists:templates,id',
             'subject' => 'required|string',
             'content' => 'required|string',
             'target_status' => 'required|string',
@@ -189,8 +240,27 @@ class CampaignController extends Controller
     public function sendNow(Campaign $campaign)
     {
         try {
-            if ($campaign->status === 'Sent' || $campaign->status === 'Processing') {
-                return back()->with('error', 'This campaign is already being processed or has been sent.');
+            if ($campaign->status === 'Processing') {
+                return back()->with('error', 'This campaign is already being processed.');
+            }
+
+            if ($campaign->status === 'Sent') {
+                $pendingCount = \App\Models\PendingEmail::where('campaign_id', $campaign->id)
+                    ->where('status', 'pending')
+                    ->count();
+
+                if ($pendingCount > 0) {
+                    $rotationService = app(\App\Services\SmtpRotationService::class);
+                    $sentCount = $rotationService->retryCampaignPending($campaign);
+
+                    if ($sentCount > 0) {
+                        return back()->with('success', "Retried sending failed emails. {$sentCount} sent successfully.");
+                    } else {
+                        return back()->with('error', 'Failed to send retry emails. All active SMTP providers might be exhausted.');
+                    }
+                }
+
+                return back()->with('error', 'This campaign is already sent and has no pending/failed emails.');
             }
 
             \App\Jobs\ProcessCampaign::dispatch($campaign);

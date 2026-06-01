@@ -47,7 +47,12 @@
             return this.openSubmenus[key] || false;
         },
         isActive(path) {
-            return window.location.pathname === path || '{{ $currentPath }}' === path.replace(/^\//, '');
+            const cleanPath = '/' + path.replace(/^\//, '');
+            const currentLoc = window.location.pathname;
+            if (cleanPath === '/') {
+                return currentLoc === '/';
+            }
+            return currentLoc === cleanPath || currentLoc.startsWith(cleanPath + '/');
         }
     }"
     :class="{
@@ -65,12 +70,12 @@
         'justify-start'">
         <a href="/">
             <img x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen"
-                class="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width="150" height="40" />
+                class="dark:hidden" src="/images/logo/blue-brand-logo.png" alt="Logo" width="150" height="40" />
             <img x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen"
-                class="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width="150"
+                class="hidden dark:block" src="/images/logo/white-brand-logo.png" alt="Logo" width="150"
                 height="40" />
             <img x-show="!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen"
-                src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
+                src="/images/logo/sidebar-logo.png" alt="Logo" width="32" height="32" />
 
         </a>
     </div>
@@ -216,12 +221,6 @@
                 @endforeach
             </div>
         </nav>
-
-        <!-- Sidebar Widget -->
-        <!-- <div x-data x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen" x-transition class="mt-auto">
-            @include('layouts.sidebar-widget')
-        </div> -->
-
     </div>
 </aside>
 

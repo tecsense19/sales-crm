@@ -13,6 +13,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('subject');
             $table->longText('body');
+            $table->string('target_status')->default('all');
+            $table->json('selected_clients')->nullable();
+            $table->json('external_emails')->nullable();
+            $table->timestamp('scheduled_at')->nullable();
             $table->string('status')->default('Draft'); // Draft, Sent, Failed
             $table->integer('sent_count')->default(0);
             $table->integer('failed_count')->default(0);
