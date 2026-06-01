@@ -158,7 +158,7 @@
                             <img src="./images/logo/auth-brand-logo.png" alt="Logo" />
                         </a>
                         <!-- <p class="text-center text-blue-200/90 text-sm tracking-wide font-medium mt-2">
-                            Client CRM Portal
+                            Sales CRM Portal
                         </p> -->
                     </div>
                 </div>

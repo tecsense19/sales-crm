@@ -42,15 +42,15 @@ class AppServiceProvider extends ServiceProvider
 
             //     if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
                     // Coment: Windows background command
-                    // \Illuminate\Support\Facades\Log::info('TailAdmin: Triggering background queue worker (queue:work)');
+                    // \Illuminate\Support\Facades\Log::info('Sales CRM: Triggering background queue worker (queue:work)');
                     // pclose(popen("start /B {$php} \"{$artisan}\" queue:work --stop-when-empty --tries=1", "r"));
                 // } else {
                     // Coment: Linux background command
-        //             \Illuminate\Support\Facades\Log::info('TailAdmin: Triggering background queue worker (queue:work)');
+        //             \Illuminate\Support\Facades\Log::info('Sales CRM: Triggering background queue worker (queue:work)');
         //             exec("{$php} \"{$artisan}\" queue:work --stop-when-empty --tries=1 > /dev/null 2>&1 &");
         //         }
         //     } else {
-        //         \Illuminate\Support\Facades\Log::debug('TailAdmin: Worker trigger skipped: A worker was recently started and is likely already processing the queue.');
+        //         \Illuminate\Support\Facades\Log::debug('Sales CRM: Worker trigger skipped: A worker was recently started and is likely already processing the queue.');
         //     }
         // };
 
@@ -59,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
         // It runs once every minute (using a cache lock).
         // $triggerScheduler = function () {
         //     if (Cache::lock('scheduler_trigger', 55)->get()) {
-        //         \Illuminate\Support\Facades\Log::info('TailAdmin: Triggering background scheduler (schedule:run)');
+        //         \Illuminate\Support\Facades\Log::info('Sales CRM: Triggering background scheduler (schedule:run)');
         //         $php = PHP_BINARY;
         //         $artisan = base_path('artisan');
 
