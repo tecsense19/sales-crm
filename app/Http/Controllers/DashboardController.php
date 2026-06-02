@@ -47,7 +47,7 @@ class DashboardController extends Controller
             ->orderBy('total', 'desc')
             ->get();
 
-        // Team Wise Statistics (Admins/Managers only)
+        // Team Wise Statistics (Admins only)
         $userPerformance = [];
         if ($user->role !== 'employee') {
             $userPerformance = User::withCount(['clients' => function($q) use ($dateRange) {

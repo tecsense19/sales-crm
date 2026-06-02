@@ -115,52 +115,52 @@
                                      {{-- Reset Counter --}}
                                      <form method="POST" action="{{ route('smtp-providers.reset-counter', $provider) }}" class="inline">
                                          @csrf
-                                         <button type="submit" 
+                                         <button type="submit" title="Reset Counter"
                                              class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
                                              </svg>
-                                             Reset
+                                             <!-- Reset -->
                                          </button>
                                      </form>
-
+ 
                                      {{-- Toggle Active State --}}
                                      <form method="POST" action="{{ route('smtp-providers.toggle', $provider) }}" class="inline">
                                          @csrf
-                                         <button type="submit" 
+                                         <button type="submit" title="{{ $provider->is_active ? 'Disable' : 'Enable' }}"
                                              class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                              @if($provider->is_active)
                                                  <svg class="w-3.5 h-3.5 text-warning-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                                      <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                                  </svg>
-                                                 Disable
+                                                 <!-- Disable -->
                                              @else
                                                  <svg class="w-3.5 h-3.5 text-success-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                  </svg>
-                                                 Enable
+                                                 <!-- Enable -->
                                              @endif
                                          </button>
                                      </form>
-
+ 
                                      {{-- Edit --}}
-                                     <button onclick="openEditModal({{ $provider->id }}, {{ $provider->toJson() }})"
+                                     <button onclick="openEditModal({{ $provider->id }}, {{ $provider->toJson() }})" title="Edit"
                                          class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.089a4.5 4.5 0 01-2.062 1.238l-3.29 1.19a.75.75 0 01-.92-.919l1.19-3.29a4.5 4.5 0 011.238-2.062L16.862 4.487zM16.862 4.487L19.5 7.125" />
                                          </svg>
-                                         Edit
+                                         <!-- Edit -->
                                      </button>
-
+ 
                                      {{-- Delete --}}
                                      <form method="POST" action="{{ route('smtp-providers.destroy', $provider) }}" class="inline">
                                          @csrf @method('DELETE')
-                                         <button type="button" onclick="confirmDelete(this.closest('form'), '{{ $provider->name }}')"
+                                         <button type="button" onclick="confirmDelete(this.closest('form'), '{{ $provider->name }}')" title="Delete"
                                              class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20">
                                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
                                              </svg>
-                                             Delete
+                                             <!-- Delete -->
                                          </button>
                                      </form>
                                  </div>

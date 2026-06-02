@@ -28,7 +28,7 @@ class KanbanController extends Controller
             'Not Interested'
         ];
 
-        // Fetch users list for filter (for admins/managers)
+        // Fetch users list for filter (for admins)
         $users = [];
         if ($user->role !== 'employee') {
             $users = User::all();

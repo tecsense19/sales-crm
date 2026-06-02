@@ -24,9 +24,27 @@ class CampaignController extends Controller
         return view('pages.campaigns.index', compact('campaigns', 'stats'));
     }
 
+    public function searchClients(Request $request)
+    {
+        $search = $request->input('q');
+        
+        $clients = Client::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'email']);
+
+        return response()->json($clients);
+    }
+
     public function create()
     {
-        $clients = Client::orderBy('name')->get();
+        $clients = collect();
         $templates = \App\Models\Template::orderBy('name')->get();
         return view('pages.campaigns.create', compact('clients', 'templates'));
     }
@@ -146,7 +164,8 @@ class CampaignController extends Controller
 
     public function edit(Campaign $campaign)
     {
-        $clients = Client::orderBy('name')->get();
+        $selectedIds = $campaign->selected_clients ?? [];
+        $clients = Client::whereIn('id', $selectedIds)->orderBy('name')->get();
         $templates = \App\Models\Template::orderBy('name')->get();
         return view('pages.campaigns.edit', compact('campaign', 'clients', 'templates'));
     }

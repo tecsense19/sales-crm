@@ -15,6 +15,13 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            if (!in_array($user->role, ['admin', 'employee'])) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Access denied. You do not have permission to access this application.',
+                ])->onlyInput('email');
+            }
             $request->session()->regenerate();
             return redirect()->intended('/');
         }

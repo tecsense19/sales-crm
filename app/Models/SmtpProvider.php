@@ -19,6 +19,16 @@ class SmtpProvider extends Model
         'limit_reset_date' => 'date',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::retrieved(function (self $provider) {
+            $provider->resetIfNewDay();
+        });
+    }
+
     public function getApiKeyAttribute($value)
     {
         if (empty($value)) return $value;

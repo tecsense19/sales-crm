@@ -8,7 +8,71 @@
     </div>
 
     <!-- Date Range Filter -->
-    <form action="{{ route('reports.team-wise') }}" method="GET" class="flex items-center gap-3">
+    <form action="{{ route('reports.team-wise') }}" method="GET" class="flex flex-wrap items-center gap-3">
+        <!-- Employee Filter -->
+        <div x-data="{
+            open: false,
+            search: '',
+            selectedId: '{{ $selectedEmployeeId ?? '' }}',
+            selectedName: 'All Members',
+            employees: {{ $employees->map(fn($e) => ['id' => (string)$e->id, 'name' => $e->name])->toJson() }},
+            
+            init() {
+                if (this.selectedId) {
+                    const found = this.employees.find(e => e.id === this.selectedId);
+                    if (found) this.selectedName = found.name;
+                }
+            },
+            get filteredEmployees() {
+                if (!this.search) return this.employees;
+                return this.employees.filter(e => e.name.toLowerCase().includes(this.search.toLowerCase()));
+            },
+            selectEmployee(employee) {
+                if (employee === null) {
+                    this.selectedId = '';
+                    this.selectedName = 'All Members';
+                } else {
+                    this.selectedId = employee.id;
+                    this.selectedName = employee.name;
+                }
+                this.open = false;
+                this.search = '';
+            }
+        }" class="relative" @click.away="open = false" style="width: 288px;">
+            <input type="hidden" name="employee_id" :value="selectedId">
+            <button type="button" @click="open = !open"
+                class="flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                <span x-text="selectedName"></span>
+                <svg class="h-4 w-4 text-gray-500 transition-transform dark:text-gray-400" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div x-show="open" x-transition
+                class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                <div class="p-2 border-b border-gray-100 dark:border-gray-800">
+                    <input type="text" x-model="search" placeholder="Search member..."
+                        class="h-9 w-full rounded-md border border-gray-200 bg-transparent px-3 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
+                        @click.stop>
+                </div>
+                <div class="max-h-60 overflow-y-auto py-1">
+                    <button type="button" @click="selectEmployee(null)"
+                        class="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                        All Members
+                    </button>
+                    <template x-for="emp in filteredEmployees" :key="emp.id">
+                        <button type="button" @click="selectEmployee(emp)"
+                            class="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+                            <span x-text="emp.name"></span>
+                        </button>
+                    </template>
+                    <div x-show="filteredEmployees.length === 0" class="px-4 py-2 text-xs text-gray-400 italic">
+                        No members found
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date Range Filter -->
         <div class="w-72">
             <x-form.date-picker 
                 name="date_range" 
@@ -17,9 +81,16 @@
                 :defaultDate="[$startDate, $endDate]"
             />
         </div>
-        <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
+
+        <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors" title="Apply filter">
             Filter
         </button>
+
+        @if(request('date_range') || request('employee_id'))
+            <a href="{{ route('reports.team-wise') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] transition-colors" title="Clear filter">
+                Clear
+            </a>
+        @endif
     </form>
 </div>
 

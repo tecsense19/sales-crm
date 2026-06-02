@@ -180,11 +180,18 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Date Range</label>
-                                <input type="date" name="from_date" value="{{ request('from_date') }}"
-                                    class="dark:bg-dark-900 shadow-theme-xs h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:text-white/90 mb-2">
-                                <input type="date" name="to_date" value="{{ request('to_date') }}"
-                                    class="dark:bg-dark-900 shadow-theme-xs h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:text-white/90">
+                                <x-form.date-picker 
+                                    name="from_date" 
+                                    placeholder="From Date"
+                                    :defaultDate="request('from_date')"
+                                />
+                                <div class="mt-2">
+                                    <x-form.date-picker 
+                                        name="to_date" 
+                                        placeholder="To Date"
+                                        :defaultDate="request('to_date')"
+                                    />
+                                </div>
                             </div>
                             <button type="submit" class="bg-brand-500 hover:bg-brand-600 h-11 w-full rounded-lg px-3 py-2 text-sm font-bold text-white transition shadow-theme-xs">Apply Filter</button>
                         </form>
@@ -251,21 +258,21 @@
                         </td>
                         <td class="px-5 py-4 whitespace-nowrap text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('billing.show', $billing) }}"
+                                <a href="{{ route('billing.show', $billing) }}" title="Preview"
                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    Preview
+                                    <!-- Preview -->
                                 </a>
                                 
-                                <a href="{{ route('billing.edit', $billing) }}"
+                                <a href="{{ route('billing.edit', $billing) }}" title="Edit"
                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    Edit
+                                    <!-- Edit -->
                                 </a>
 
                                 <form action="{{ route('billing.destroy', $billing) }}" method="POST" id="delete-form-{{ $billing->id }}" class="inline">
                                     @csrf @method('DELETE')
-                                    <button type="button" @click="
+                                    <button type="button" title="Delete" @click="
                                         Swal.fire({
                                             title: 'Delete Invoice?',
                                             text: 'Are you sure you want to delete this invoice?',
@@ -288,7 +295,7 @@
                                         })
                                     " class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                        Delete
+                                        <!-- Delete -->
                                     </button>
                                 </form>
                             </div>

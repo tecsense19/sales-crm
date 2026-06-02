@@ -315,10 +315,10 @@
                         <td class="px-5 py-4 whitespace-nowrap text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <!-- View Details / Preview -->
-                                <a href="{{ route('campaigns.show', $campaign) }}"
+                                <a href="{{ route('campaigns.show', $campaign) }}" title="Preview"
                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    Preview
+                                    <!-- Preview -->
                                 </a>
 
                                 <!-- Send Now / Retry -->
@@ -347,16 +347,16 @@
                                 @endif
 
                                 <!-- Edit Campaign -->
-                                <a href="{{ route('campaigns.edit', $campaign) }}"
+                                <a href="{{ route('campaigns.edit', $campaign) }}" title="Edit"
                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    Edit
+                                    <!-- Edit -->
                                 </a>
 
                                 <!-- Delete -->
                                 <form action="{{ route('campaigns.destroy', $campaign) }}" method="POST" id="delete-form-{{ $campaign->id }}" class="inline">
                                     @csrf @method('DELETE')
-                                    <button type="button"
+                                    <button type="button" title="Delete"
                                             @click="
                                                 Swal.fire({
                                                     title: 'Delete Campaign?',
@@ -381,7 +381,7 @@
                                             "
                                             class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                        Delete
+                                        <!-- Delete -->
                                     </button>
                                 </form>
                             </div>

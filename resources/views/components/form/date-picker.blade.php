@@ -5,8 +5,13 @@
     'label' => null,
     'placeholder' => 'Select date',
     'name' => null,
-    'dateFormat' => 'Y-m-d',
+    'dateFormat' => null,
+    'enableTime' => false,
 ])
+
+@php
+    $finalDateFormat = $dateFormat ?? ($enableTime ? 'Y-m-d H:i' : 'Y-m-d');
+@endphp
 
 <div x-data="{
     flatpickrInstance: null,
@@ -16,7 +21,8 @@
                 mode: '{{ $mode }}',
                 static: true,
                 monthSelectorType: 'static',
-                dateFormat: '{{ $dateFormat }}',
+                dateFormat: '{{ $finalDateFormat }}',
+                enableTime: {{ $enableTime ? 'true' : 'false' }},
                 defaultDate: {{ $defaultDate ? (is_array($defaultDate) ? json_encode($defaultDate) : "'" . $defaultDate . "'") : 'null' }},
                 onChange: (selectedDates, dateStr, instance) => {
                     this.$dispatch('date-change', {

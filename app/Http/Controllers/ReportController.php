@@ -35,8 +35,8 @@ class ReportController extends Controller
             }
         }
 
-        $startDate = $startDate ?: Carbon::now()->startOfMonth()->toDateString();
-        $endDate = $endDate ?: Carbon::now()->endOfDay()->toDateString();
+        $startDate = $startDate ?: Carbon::now()->subMonth()->startOfMonth()->toDateString();
+        $endDate = $endDate ?: Carbon::now()->toDateString();
 
         $query->whereBetween('created_at', [
             Carbon::parse($startDate)->startOfDay(),
@@ -90,7 +90,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
         
-        // Only admins/managers should see full team reports
+        // Only admins should see full team reports
         if ($user->role === 'employee') {
             return redirect()->route('dashboard')->with('error', 'Unauthorized access.');
         }
@@ -109,16 +109,23 @@ class ReportController extends Controller
             }
         }
 
-        $startDate = $startDate ?: Carbon::now()->startOfMonth()->toDateString();
-        $endDate = $endDate ?: Carbon::now()->endOfDay()->toDateString();
+        $startDate = $startDate ?: Carbon::now()->subMonth()->startOfMonth()->toDateString();
+        $endDate = $endDate ?: Carbon::now()->toDateString();
+        $employeeId = $request->get('employee_id');
 
-        // Grouping by Assigned User (since the 'teams' column data is currently incorrect/emails)
-        $teamStats = Client::query()
+        // Grouping by Assigned User
+        $teamStatsQuery = Client::query()
             ->join('users', 'clients.assigned_to', '=', 'users.id')
             ->whereBetween('clients.created_at', [
                 Carbon::parse($startDate)->startOfDay(),
                 Carbon::parse($endDate)->endOfDay()
-            ])
+            ]);
+
+        if ($employeeId) {
+            $teamStatsQuery->where('users.id', $employeeId);
+        }
+
+        $teamStats = $teamStatsQuery
             ->select('users.name as teams', 
                 DB::raw('count(*) as total_clients'),
                 DB::raw('SUM(CASE WHEN clients.status IN ("Closed Won", "Converted") THEN 1 ELSE 0 END) as closed_won'),
@@ -129,18 +136,26 @@ class ReportController extends Controller
             ->withQueryString();
 
         // Performance by Assigned User (Team members)
-        $userPerformance = User::withCount(['clients' => function($q) use ($startDate, $endDate) {
+        $userPerformanceQuery = User::withCount(['clients' => function($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [
                     Carbon::parse($startDate)->startOfDay(),
                     Carbon::parse($endDate)->endOfDay()
                 ]);
-            }])
-            ->get();
+            }]);
+
+        if ($employeeId) {
+            $userPerformanceQuery->where('id', $employeeId);
+        }
+
+        $userPerformance = $userPerformanceQuery->get();
+        $employees = User::orderBy('name')->get();
 
         return view('pages.reports.team-wise', [
             'title' => 'Team Wise Reports',
             'teamStats' => $teamStats,
             'userPerformance' => $userPerformance,
+            'employees' => $employees,
+            'selectedEmployeeId' => $employeeId,
             'startDate' => $startDate,
             'endDate' => $endDate,
         ]);

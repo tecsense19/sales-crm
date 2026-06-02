@@ -1120,20 +1120,29 @@
         
         let client = null;
         let oldStatus = null;
+        let oldIdx = -1;
         
         for (let s of this.statuses) {
             let idx = this.clientsByStatus[s].findIndex(c => c.id == id);
             if (idx > -1) {
                 client = this.clientsByStatus[s][idx];
                 oldStatus = s;
-                this.clientsByStatus[s].splice(idx, 1);
-                this.counts[s]--;
+                oldIdx = idx;
                 break;
             }
         }
         
-        if(!client||oldStatus===status) return;
+        if(!client) return;
         
+        if(oldStatus === status) {
+            return;
+        }
+        
+        // Remove from old column
+        this.clientsByStatus[oldStatus].splice(oldIdx, 1);
+        this.counts[oldStatus]--;
+        
+        // Add to new column
         client.status = status;
         this.clientsByStatus[status].unshift(client);
         this.counts[status]++;
@@ -1442,11 +1451,11 @@
 }" class="flex flex-col gap-4 h-full">
 
     {{-- Header --}}
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4 flex-wrap">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-4 flex-wrap flex-1">
             <x-common.page-breadcrumb pageTitle="Clients Board" />
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 self-end sm:self-auto">
             {{-- Active filter badges --}}
             <div class="kb-filter-badges" x-show="hasActiveFilters()" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                 <template x-if="search">
@@ -1466,22 +1475,31 @@
                 </template>
                 <button @click="search=''; techFilter=''; assignedFilter=''; locationFilter=''; clearDateFilter();" class="kb-clear-all">Clear all</button>
             </div>
-            <button type="button" @click="filterDrawer = true"
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-750 relative">
+            <button type="button" @click="filterDrawer = true" title="Filter"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-750 relative">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                 </svg>
-                <span>Filter</span>
+                <span class="hidden sm:inline">Filter</span>
                 <span x-show="hasActiveFilters()" class="flex h-2.5 w-2.5" style="position: absolute; top: -3px; right: -3px;">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span>
                 </span>
             </button>
+            <a href="{{ route('import.index') }}" title="Import Data"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-750">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span class="hidden sm:inline">Import Data</span>
+            </a>
             @if(auth()->check())
-            <button type="button" @click="openCreateModal()"
-               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition">
+            <button type="button" @click="openCreateModal()" title="Add Client"
+               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M10 5v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                Add Client
+                <span class="hidden sm:inline">Add Client</span>
             </button>
             @endif
         </div>

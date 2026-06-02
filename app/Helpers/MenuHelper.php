@@ -30,11 +30,6 @@ class MenuHelper
                 'name' => 'Templates',
                 'path' => '/templates',
             ],
-            [
-                'name' => 'Import Data',
-                'icon' => 'task',
-                'path' => '/import',
-            ],
         ];
 
         // Admin only items
@@ -43,6 +38,11 @@ class MenuHelper
                 'name' => 'Billing',
                 'icon' => 'ecommerce',
                 'path' => '/billing',
+            ];
+            $items[] = [
+                'name' => 'Users',
+                'icon' => 'user-profile',
+                'path' => '/users',
             ];
             // $items[] = [
             //     'name' => 'SMTP Settings',

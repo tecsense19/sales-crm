@@ -14,8 +14,8 @@ class SmtpProviderController extends Controller
 
         $providers = SmtpProvider::orderBy('priority')->get();
         $pendingCount = PendingEmail::where('status', 'pending')->count();
-        $sentToday = SmtpProvider::sum('sent_today');
-        $totalCapacity = SmtpProvider::where('is_active', true)->sum('daily_limit');
+        $sentToday = $providers->sum('sent_today');
+        $totalCapacity = $providers->where('is_active', true)->sum('daily_limit');
 
         return view('pages.settings.smtp-providers', compact(
             'providers', 'pendingCount', 'sentToday', 'totalCapacity'

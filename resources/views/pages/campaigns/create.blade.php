@@ -6,8 +6,103 @@
     </div>
 
     <form action="{{ route('campaigns.store') }}" method="POST" enctype="multipart/form-data" 
-        x-data="{ targetStatus: 'none', selectedClients: [], fileName: '', dragOver: false, selectedTemplate: '', subject: '', content: '', templates: @js($templates) }" 
-        x-init="$watch('targetStatus', value => { if (value !== 'custom') selectedClients = [] })"
+        x-data="{ 
+            targetStatus: 'none', 
+            selectedClients: [], 
+            selectedClientsDetails: [],
+            searchQuery: '',
+            searchResults: [],
+            isSearching: false,
+            fileName: '', 
+            dragOver: false, 
+            selectedTemplate: '', 
+            subject: '', 
+            templates: @js($templates),
+            tplOpen: false,
+            tplSearch: '',
+            get filteredTemplates() {
+                const opts = [{ value: '', label: '-- Choose Template --' }, ...this.templates.map(t => ({ value: String(t.id), label: t.name }))];
+                if (!this.tplSearch) return opts;
+                return opts.filter(o => o.label.toLowerCase().includes(this.tplSearch.toLowerCase()));
+            },
+            get selectedTemplateLabel() {
+                const t = this.templates.find(t => String(t.id) === String(this.selectedTemplate));
+                return t ? t.name : '-- Choose Template --';
+            },
+            
+            toggleClient(client) {
+                const id = Number(client.id);
+                const idx = this.selectedClients.map(Number).indexOf(id);
+                if (idx !== -1) {
+                    this.selectedClients.splice(idx, 1);
+                    this.selectedClientsDetails = this.selectedClientsDetails.filter(c => Number(c.id) !== id);
+                } else {
+                    this.selectedClients.push(id);
+                    this.selectedClientsDetails.push({
+                        id: id,
+                        name: client.name,
+                        email: client.email
+                    });
+                }
+            },
+            
+            selectAllVisible() {
+                this.searchResults.forEach(client => {
+                    const id = Number(client.id);
+                    if (!this.selectedClients.map(Number).includes(id)) {
+                        this.selectedClients.push(id);
+                        this.selectedClientsDetails.push({
+                            id: id,
+                            name: client.name,
+                            email: client.email
+                        });
+                    }
+                });
+            },
+            
+            fetchClients(query) {
+                this.isSearching = true;
+                fetch(`/campaigns/search-clients?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.searchResults = data;
+                        this.isSearching = false;
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.isSearching = false;
+                    });
+            },
+            
+            selectOption(val) {
+                this.selectedTemplate = val;
+                const temp = this.templates.find(t => String(t.id) === String(val));
+                if (temp) {
+                    this.subject = temp.subject;
+                    if (window.CKEDITOR && window.CKEDITOR.instances.editor) {
+                        window.CKEDITOR.instances.editor.setData(temp.content || '');
+                    }
+                } else {
+                    this.subject = '';
+                    if (window.CKEDITOR && window.CKEDITOR.instances.editor) {
+                        window.CKEDITOR.instances.editor.setData('');
+                    }
+                }
+                this.tplOpen = false;
+                this.tplSearch = '';
+            }
+        }" 
+        x-init="
+            $watch('targetStatus', value => { 
+                if (value !== 'custom') {
+                    selectedClients = []; 
+                    selectedClientsDetails = [];
+                } else if (searchResults.length === 0) {
+                    fetchClients('');
+                }
+            }); 
+            $watch('searchQuery', value => fetchClients(value));
+        "
         @submit="if (targetStatus === 'none' && !fileName) { $event.preventDefault(); window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Please upload an external CSV/Excel file when targeting only external recipients.', type: 'error' } })); }"
         class="space-y-6">
         @csrf
@@ -51,21 +146,77 @@
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Schedule Date
                         </label>
-                        <input type="datetime-local" name="scheduled_at" 
-                            class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90" />
+                        <x-form.date-picker 
+                            name="scheduled_at" 
+                            placeholder="Select schedule date & time"
+                            :enableTime="true"
+                        />
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Target Audience <span class="text-error-500">*</span>
                         </label>
-                        <select name="target_status" x-model="targetStatus" class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90">
-                            <option value="none">None (Only External CSV Recipients)</option>
-                            <option value="all">All CRM Clients</option>
-                            <option value="custom">Specific CRM Clients (Select Below)</option>
-                            @foreach(['New', 'Interested', 'Contacted', 'In Progress', 'Follow Up', 'On Hold', 'Converted', 'Closed Won', 'Closed Lost', 'Not Interested'] as $st)
-                                <option value="{{ $st }}">{{ $st }} Clients</option>
-                            @endforeach
-                        </select>
+                        <div class="relative" x-data="{ 
+                            open: false, 
+                            search: '',
+                            options: [
+                                { value: 'none', label: 'None (Only External CSV Recipients)' },
+                                { value: 'all', label: 'All CRM Clients' },
+                                { value: 'custom', label: 'Specific CRM Clients (Select Below)' },
+                                @foreach(['New', 'Interested', 'Contacted', 'In Progress', 'Follow Up', 'On Hold', 'Converted', 'Closed Won', 'Closed Lost', 'Not Interested'] as $st)
+                                    { value: '{{ $st }}', label: '{{ $st }} Clients' },
+                                @endforeach
+                            ],
+                            get filteredOptions() {
+                                if (!this.search) return this.options;
+                                return this.options.filter(o => o.label.toLowerCase().includes(this.search.toLowerCase()));
+                            },
+                            get selectedLabel() {
+                                const option = this.options.find(o => o.value === targetStatus);
+                                return option ? option.label : 'Select Target Audience';
+                            }
+                        }" @click.outside="open = false; search = ''">
+                            <!-- Hidden native input to post value -->
+                            <input type="hidden" name="target_status" :value="targetStatus">
+                            
+                            <!-- Trigger Button -->
+                            <button type="button" @click="open = !open" 
+                                class="flex items-center justify-between dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90 text-left">
+                                <span x-text="selectedLabel"></span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            <!-- Dropdown Menu -->
+                            <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute z-9999 mt-1.5 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-850 dark:bg-gray-950 p-2 space-y-2 max-h-64 overflow-y-auto" x-cloak>
+                                <!-- Search box inside dropdown -->
+                                <div class="relative">
+                                    <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2 text-gray-400">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </span>
+                                    <input type="text" x-model="search" placeholder="Search options..." @click.stop
+                                        class="h-9 w-full rounded-md border border-gray-200 bg-gray-50 dark:bg-dark-900 pl-12 pr-3 py-1.5 text-xs text-gray-800 focus:border-brand-300 focus:ring-1 focus:ring-brand-500/10 transition dark:border-gray-800 dark:text-white/90" />
+                                </div>
+                                
+                                <!-- Options List -->
+                                <div class="space-y-0.5">
+                                    <template x-for="option in filteredOptions" :key="option.value">
+                                        <button type="button" @click="targetStatus = option.value; open = false; search = ''"
+                                            class="w-full text-left px-3 py-2 text-sm rounded-md transition-colors hover:bg-gray-105 dark:hover:bg-white/5"
+                                            :class="targetStatus === option.value ? 'bg-brand-50 text-brand-800 font-semibold dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">
+                                            <span x-text="option.label"></span>
+                                        </button>
+                                    </template>
+                                    <div x-show="filteredOptions.length === 0" class="text-center py-4 text-xs text-gray-500">
+                                        No options found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -76,22 +227,97 @@
             class="rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="border-b border-gray-100 px-7 py-5 dark:border-gray-800">
                 <h3 class="font-bold text-gray-800 dark:text-white">Select CRM Clients</h3>
-                <p class="text-sm text-gray-500">Manually pick the clients who should receive this campaign.</p>
+                <p class="text-sm text-gray-500">Search and select the clients who should receive this campaign.</p>
             </div>
-            <div class="p-7">
-                <div class="max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/50">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        @foreach($clients as $client)
-                            <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-800 transition cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-                                <input type="checkbox" name="selected_clients[]" value="{{ $client->id }}" x-model="selectedClients" class="rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-semibold text-gray-800 dark:text-white">{{ $client->name }}</span>
-                                    <span class="text-[11px] text-gray-500">{{ $client->email ?? 'No Email' }}</span>
-                                </div>
-                            </label>
-                        @endforeach
+            <div class="p-7 space-y-6">
+                <!-- Selected Clients list (Tags/Badges) -->
+                <div x-show="selectedClientsDetails.length > 0" class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            Selected Clients (<span x-text="selectedClientsDetails.length"></span>)
+                        </span>
+                        <button type="button" @click="selectedClients = []; selectedClientsDetails = []" class="text-xs font-medium text-error-500 hover:text-error-600 transition-colors">
+                            Clear Selection
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <template x-for="client in selectedClientsDetails" :key="client.id">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-brand-50 text-brand-800 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-100 dark:border-brand-500/20">
+                                <span x-text="client.name"></span>
+                                <button type="button" @click="toggleClient(client)" class="text-brand-500 hover:text-brand-700 dark:hover:text-brand-300">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </span>
+                        </template>
                     </div>
                 </div>
+
+                <!-- Search Input -->
+                <div class="relative">
+                    <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2 text-gray-400">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </span>
+                    <input type="text" 
+                           x-model.debounce.300ms="searchQuery" 
+                           placeholder="Search CRM Clients by name or email..." 
+                           class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-12 pr-12 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90" />
+                    <div class="absolute -translate-y-1/2 right-4 top-1/2 flex items-center" x-show="isSearching" x-cloak>
+                        <svg class="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Search Results Grid -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400" x-text="searchQuery ? 'Search Results' : 'Suggested Clients'"></span>
+                        <template x-if="searchResults.length > 0">
+                            <button type="button" @click="selectAllVisible()" class="text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors">
+                                Select All Visible
+                            </button>
+                        </template>
+                    </div>
+                    
+                    <div class="max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/50">
+                        <!-- Empty State / Loading State -->
+                        <div x-show="searchResults.length === 0 && !isSearching" class="text-center py-6 text-sm text-gray-500">
+                            <span x-text="searchQuery ? 'No clients found matching \'' + searchQuery + '\'' : 'Type to search clients...'"></span>
+                        </div>
+                        
+                        <div x-show="isSearching" class="text-center py-6 text-sm text-gray-500" x-cloak>
+                            Searching clients...
+                        </div>
+
+                        <!-- Checkbox Grid -->
+                        <div x-show="searchResults.length > 0 && !isSearching" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <template x-for="client in searchResults" :key="client.id">
+                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-gray-850 transition cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                       :class="(selectedClients.includes(Number(client.id)) || selectedClients.includes(client.id.toString())) ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : ''">
+                                    <input type="checkbox" 
+                                           :value="client.id" 
+                                           :checked="selectedClients.map(Number).includes(Number(client.id))"
+                                           @change="toggleClient(client)" 
+                                           class="rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-semibold text-gray-800 dark:text-white" x-text="client.name"></span>
+                                        <span class="text-[11px] text-gray-500" x-text="client.email || 'No Email'"></span>
+                                    </div>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden Inputs for Form Submission -->
+                <template x-for="id in selectedClients" :key="id">
+                    <input type="hidden" name="selected_clients[]" :value="id">
+                </template>
             </div>
         </div>
 
@@ -183,21 +409,48 @@
                     <p class="text-sm text-gray-500">Design your email message using HTML or plain text.</p>
                 </div>
                 <div class="w-full sm:w-auto" style="width: 300px; min-width: 300px;">
-                    <select name="template_id" x-model="selectedTemplate" @change="
-                        const temp = templates.find(t => t.id == selectedTemplate);
-                        if (temp) {
-                            subject = temp.subject;
-                            content = temp.content;
-                        } else {
-                            subject = '';
-                            content = '';
-                        }
-                    " class="dark:bg-dark-900 shadow-theme-xs h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90">
-                        <option value="">-- Choose Template --</option>
-                        @foreach($templates as $temp)
-                            <option value="{{ $temp->id }}">{{ $temp->name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="relative" @click.outside="tplOpen = false; tplSearch = ''">
+                        <!-- Hidden native input to post value -->
+                        <input type="hidden" name="template_id" :value="selectedTemplate">
+                        
+                        <!-- Trigger Button -->
+                        <button type="button" @click="tplOpen = !tplOpen" 
+                            class="flex items-center justify-between dark:bg-dark-900 shadow-theme-xs h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90 text-left">
+                            <span x-text="selectedTemplateLabel"></span>
+                            <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="tplOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div x-show="tplOpen" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                            class="absolute z-9999 mt-1.5 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-850 dark:bg-gray-950 p-2 space-y-2 max-h-64 overflow-y-auto" x-cloak>
+                            <!-- Search box inside dropdown -->
+                            <div class="relative">
+                                <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2 text-gray-400">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </span>
+                                <input type="text" x-model="tplSearch" placeholder="Search templates..." @click.stop
+                                    class="h-9 w-full rounded-md border border-gray-200 bg-gray-50 dark:bg-dark-900 pl-12 pr-3 py-1.5 text-xs text-gray-800 focus:border-brand-300 focus:ring-1 focus:ring-brand-500/10 transition dark:border-gray-800 dark:text-white/90" />
+                            </div>
+                            
+                            <!-- Options List -->
+                            <div class="space-y-0.5">
+                                <template x-for="option in filteredTemplates" :key="option.value">
+                                    <button type="button" @click="selectOption(option.value)"
+                                        class="w-full text-left px-3 py-2 text-sm rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-white/5"
+                                        :class="String(selectedTemplate) === option.value ? 'bg-brand-50 text-brand-800 font-semibold dark:bg-brand-500/10 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">
+                                        <span x-text="option.label"></span>
+                                    </button>
+                                </template>
+                                <div x-show="filteredTemplates.length === 0" class="text-center py-4 text-xs text-gray-500">
+                                    No options found
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="p-7 space-y-4">
@@ -205,10 +458,7 @@
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                         Content (HTML)
                     </label>
-                    <div class="dark:bg-dark-900 shadow-theme-xs w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-sm text-gray-800 dark:text-white/90 focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 transition overflow-hidden">
-                        <div id="editor-container" style="min-height: 300px;" class="bg-white dark:bg-dark-950 text-gray-800 dark:text-white/90 border-0"></div>
-                    </div>
-                    <input type="hidden" name="content" x-model="content" id="content-input" />
+                    <textarea name="content" id="editor" rows="10" class="w-full"></textarea>
                     <p class="mt-2 text-xs text-gray-500 italic">Available tags: @{{name}}, @{{email}}, @{{location}}</p>
                 </div>
             </div>
@@ -228,94 +478,16 @@
     </form>
 
     @push('scripts')
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-    <style>
-        /* Quill Dark Mode Adjustments */
-        .dark .ql-toolbar {
-            background-color: #1f2937 !important;
-            border-color: #374151 !important;
-        }
-        .dark .ql-toolbar .ql-stroke {
-            stroke: #d1d5db !important;
-        }
-        .dark .ql-toolbar .ql-fill {
-            fill: #d1d5db !important;
-        }
-        .dark .ql-toolbar .ql-picker {
-            color: #d1d5db !important;
-        }
-        .dark .ql-container {
-            border-color: #374151 !important;
-            background-color: #111827 !important;
-        }
-        .dark .ql-editor {
-            color: #f3f4f6 !important;
-        }
-        .ql-toolbar {
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-            border-color: #e5e7eb !important;
-        }
-        .ql-container {
-            border-bottom-left-radius: 0.5rem;
-            border-bottom-right-radius: 0.5rem;
-            border-color: #e5e7eb !important;
-        }
-    </style>
+    <script>window.CKEDITOR_BASEPATH = 'https://cdn.ckeditor.com/4.22.1/full/';</script>
+    <script src="{{ asset('js/ckeditor.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('editor-container');
-            if (!container) return;
-
-            const quill = new Quill('#editor-container', {
-                theme: 'snow',
-                modules: {
-                    toolbar: [
-                        [{ 'header': [1, 2, 3, false] }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        [{ 'color': [] }, { 'background': [] }],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'clean']
-                    ]
-                }
+            CKEDITOR.replace('editor', {
+                height: 350,
+                allowedContent: true,
+                removePlugins: 'exportpdf',
+                versionCheck: false
             });
-
-            function plainTextToHtml(text) {
-                if (!text) return '';
-                if (text.includes('<p>') || text.includes('<br>') || text.includes('<div>') || text.includes('</')) {
-                    return text;
-                }
-                return text
-                    .split(/\r?\n\r?\n/)
-                    .map(para => {
-                        const cleanPara = para.replace(/\r?\n/g, '<br>');
-                        return `<p>${cleanPara}</p>`;
-                    })
-                    .join('');
-            }
-
-            const form = container.closest('form');
-            setTimeout(() => {
-                const data = Alpine.$data(form);
-                if (data) {
-                    if (data.content) {
-                        quill.root.innerHTML = plainTextToHtml(data.content);
-                    }
-
-                    quill.on('text-change', () => {
-                        const html = quill.root.innerHTML;
-                        data.content = (html === '<p><br></p>' || html === '') ? '' : html;
-                    });
-
-                    data.$watch('content', value => {
-                        const htmlValue = plainTextToHtml(value || '');
-                        if (quill.root.innerHTML !== htmlValue) {
-                            quill.root.innerHTML = htmlValue;
-                        }
-                    });
-                }
-            }, 100);
         });
     </script>
     @endpush

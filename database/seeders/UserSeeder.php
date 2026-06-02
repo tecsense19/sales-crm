@@ -31,42 +31,7 @@ class UserSeeder extends Seeder
             'instagram' => 'https://instagram.com/admin',
         ]);
 
-        // 2 Managers
-        User::create([
-            'name' => 'Manager One',
-            'email' => 'manager1@gmail.com',
-            'password' => Hash::make('123456'),
-            'role' => 'manager',
-            'phone' => '+1 345 678 9012',
-            'bio' => 'Regional Manager for North America.',
-            'country' => 'USA',
-            'location' => 'Chicago',
-            'postal_code' => '60007',
-            'tax_id' => 'TX-67890',
-            'facebook' => 'https://facebook.com/manager1',
-            'twitter' => 'https://x.com/manager1',
-            'linkedin' => 'https://linkedin.com/in/manager1',
-            'instagram' => 'https://instagram.com/manager1',
-        ]);
-
-        User::create([
-            'name' => 'Manager Two',
-            'email' => 'manager2@gmail.com',
-            'password' => Hash::make('123456'),
-            'role' => 'manager',
-            'phone' => '+44 20 7123 4567',
-            'bio' => 'Regional Manager for Europe.',
-            'country' => 'UK',
-            'location' => 'London',
-            'postal_code' => 'EC1A 1BB',
-            'tax_id' => 'GB-12345',
-            'facebook' => 'https://facebook.com/manager2',
-            'twitter' => 'https://x.com/manager2',
-            'linkedin' => 'https://linkedin.com/in/manager2',
-            'instagram' => 'https://instagram.com/manager2',
-        ]);
-
-        // 3 Employees
+        // 2 Employees
         User::create([
             'name' => 'Employee One',
             'email' => 'employee1@gmail.com',

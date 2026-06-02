@@ -106,6 +106,25 @@
         .swal2-container {
             z-index: 999999 !important;
         }
+        /* CKEditor 4 Dialog Reset for Tailwind CSS */
+        .cke_dialog_background_cover {
+            z-index: 999998 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(2px) !important;
+        }
+        .cke_dialog,
+        .cke_dialog_container {
+            z-index: 999999 !important;
+        }
+        .cke_dialog_container table {
+            width: auto !important;
+            border-collapse: separate !important;
+        }
+        .cke_dialog_container td,
+        .cke_dialog_container th {
+            padding: revert !important;
+            border: revert !important;
+        }
     </style>
 </head>
 

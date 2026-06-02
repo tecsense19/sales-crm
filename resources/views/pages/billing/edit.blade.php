@@ -40,15 +40,21 @@
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Issue Date <span class="text-error-500">*</span>
                         </label>
-                        <input type="date" name="issue_date" value="{{ $billing->issue_date->format('Y-m-d') }}" required
-                            class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90" />
+                        <x-form.date-picker 
+                            name="issue_date" 
+                            placeholder="Select issue date"
+                            :defaultDate="$billing->issue_date->format('Y-m-d')"
+                        />
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                             Due Date <span class="text-error-500">*</span>
                         </label>
-                        <input type="date" name="due_date" value="{{ $billing->due_date->format('Y-m-d') }}" required
-                            class="dark:bg-dark-900 shadow-theme-xs h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 transition dark:border-gray-700 dark:text-white/90" />
+                        <x-form.date-picker 
+                            name="due_date" 
+                            placeholder="Select due date"
+                            :defaultDate="$billing->due_date->format('Y-m-d')"
+                        />
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">

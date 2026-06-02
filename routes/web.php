@@ -12,9 +12,17 @@ use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\UserController;
 
 // Auth Routes
-Route::post('/signin', [AuthController::class, 'login']);
+// Route::post('/signin', [AuthController::class, 'login']);
+// Authentication pages
+Route::middleware(['guest'])->group(function () {
+    Route::get('/signin', function () {
+        return view('pages.auth.signin', ['title' => 'Sign In']);
+    })->name('login');
+    Route::post('/signin', [AuthController::class, 'login']);
+});
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
@@ -52,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
 
 
     // campaigns
+    Route::get('/campaigns/search-clients', [CampaignController::class, 'searchClients'])->name('campaigns.search-clients');
     Route::get('/campaigns/export', [CampaignController::class, 'export'])->name('campaigns.export');
     Route::post('/campaigns/bulk-destroy', [CampaignController::class, 'bulkDestroy'])->name('campaigns.bulk-destroy');
     Route::post('/campaigns/{campaign}/send-now', [CampaignController::class, 'sendNow'])->name('campaigns.send-now');
@@ -66,18 +75,18 @@ Route::middleware(['auth'])->group(function () {
         return view('pages.profile', ['title' => 'Profile']);
     })->name('profile');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/team-wise', [ReportController::class, 'teamWise'])->name('reports.team-wise');
 
+    // users resource
+    Route::resource('users', UserController::class);
+
     // dashboard pages
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });
-// Authentication pages
-Route::get('/signin', function () {
-    return view('pages.auth.signin', ['title' => 'Sign In']);
-})->name('login');
 
 
 
